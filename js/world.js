@@ -277,6 +277,15 @@ function wingGeometry() {
   wingGeoCache = g; return g;
 }
 
+async function readyDecalFonts() {
+  if (!document.fonts?.load) return;
+  const loaded = Promise.all([
+    document.fonts.load('600 64px Geist'),
+    document.fonts.load('500 16px "Geist Mono"'),
+  ]).catch(() => {});
+  await Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, 1500))]);
+}
+
 function droneDecal() {
   const W = 1024, Hh = 768; // x: -7..7, z: -5.3..2.5 -> canvas
   const c = document.createElement('canvas'); c.width = W; c.height = Hh;
@@ -667,6 +676,7 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
   const hemiA = new THREE.HemisphereLight(0xcfd8e0, 0x2a2a20, 0.9); sceneA.add(hemiA);
   const sun = new THREE.DirectionalLight(0xfff2e0, 3.2); sun.position.copy(terrain.uniforms.uSunDir.value).multiplyScalar(100); sceneA.add(sun);
 
+  await readyDecalFonts();
   const drones = [makeDrone({ env }), makeDrone({ env }), makeDrone({ env })];
   drones.forEach((d) => sceneA.add(d));
 
