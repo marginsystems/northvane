@@ -1,5 +1,5 @@
 import Lenis from './vendor/lenis.mjs';
-import { createWorld, createBoot, STOPS } from './world.js';
+import { createWorld, STOPS } from './world.js';
 import { SCENES, MAP_TAGS, MULTI_TAGS, SERVICE_TAGS, DETECT_LABELS, USE_CASES, GLOBE_TEXT, GLOBE_EVENTS, AUTONOMY, FOUNDERS, MENU, FOOTER } from './content.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -264,8 +264,6 @@ document.addEventListener('visibilitychange', () => { if (!audio) return; docume
 const boot = $('#boot');
 const bootBar = $('.boot-bar i');
 const bootLabel = $('.boot-label');
-let bootDrone = null;
-if (!params.has('bake')) { try { bootDrone = createBoot($('#boot-canvas')); } catch (_) { /* no webgl */ } }
 let world = null;
 const t0 = performance.now();
 
@@ -274,10 +272,6 @@ function setProgress(p) { bootBar.style.transform = `scaleX(${p})`; }
 async function init() {
   setProgress(0.08);
   bootLabel.textContent = 'Building scene';
-  // The boot drone is its own WebGL context. Drop it before the main one,
-  // or the scene compile falls back to a slow software context.
-  bootDrone?.dispose();
-  bootDrone = null;
   try {
     world = await createWorld($('#gl'), { onProgress: (p) => setProgress(0.1 + p * 0.85) });
   } catch (err) {
@@ -304,7 +298,7 @@ function startExperience(instant = false) {
   if (live) return;
   live = true;
   boot.classList.add('is-done');
-  setTimeout(() => { bootDrone?.dispose(); boot.remove(); }, 900);
+  setTimeout(() => { boot.remove(); }, 900);
   document.body.classList.remove('is-booting');
   document.body.classList.add('is-live');
   lenis.start();
