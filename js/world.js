@@ -91,12 +91,26 @@ function normalTexture() {
   return t;
 }
 
+async function loadTerrainMap(url, srgb) {
+  // createImageBitmap decodes off the main thread. imageOrientation none matches the old flipY:false upload.
+  const loader = new THREE.ImageBitmapLoader();
+  loader.setOptions({ imageOrientation: 'none', premultiplyAlpha: 'none' });
+  const bitmap = await loader.loadAsync(url);
+  const tex = new THREE.Texture(bitmap);
+  tex.flipY = false;
+  tex.generateMipmaps = true;
+  tex.needsUpdate = true;
+  if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 async function makeTerrain(renderer) {
-  const loader = new THREE.TextureLoader();
-  const [alb, light] = await Promise.all(['assets/terrain/albedo.jpg', 'assets/terrain/light.jpg'].map((u) => loader.loadAsync(u)));
+  const [alb, light] = await Promise.all([
+    loadTerrainMap('assets/terrain/albedo.jpg', true),
+    loadTerrainMap('assets/terrain/light.jpg', false),
+  ]);
   const aniso = renderer.capabilities.getMaxAnisotropy();
-  alb.colorSpace = THREE.SRGBColorSpace; alb.flipY = false; alb.anisotropy = aniso; alb.needsUpdate = true;
-  light.flipY = false; light.needsUpdate = true;
+  alb.anisotropy = aniso;
+  light.anisotropy = aniso;
   const nrm = normalTexture(); nrm.anisotropy = aniso;
   const geo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_SEG, TERRAIN_SEG);
   geo.rotateX(-Math.PI / 2);
