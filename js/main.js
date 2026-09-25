@@ -144,6 +144,20 @@ let stepping = false;
 let booted = false;
 let live = false;
 
+function blockNativeScroll(event) {
+  // Cancelling touchstart or touchend suppresses the click that follows. Only touchmove and wheel should be blocked.
+  if (event.type === 'touchstart' || event.type === 'touchend') return;
+  event.cancelable && event.preventDefault();
+}
+let jumpTimer = 0;
+let jumpFadeTimer = 0;
+function endStep() {
+  stepping = false;
+  if (jumpTimer) { clearTimeout(jumpTimer); jumpTimer = 0; }
+  if (jumpFadeTimer) { clearTimeout(jumpFadeTimer); jumpFadeTimer = 0; }
+  const stage = $('#stage');
+  if (stage) stage.style.opacity = '1';
+}
 function stepTo(k, fast = false) {
   const y = lenis.animatedScroll;
   const target = stopPx(k);
@@ -152,28 +166,28 @@ function stepTo(k, fast = false) {
   stepping = true;
   const speed = VH * 5 / 2.15; // one 500vh scene in ~2.15s
   const duration = fast ? 0.75 : Math.max(0.45, dist / speed);
-  lenis.scrollTo(target, { duration, easing: (t) => t, lock: true, force: true, onComplete: () => { stepping = false; } });
+  lenis.scrollTo(target, { duration, easing: (t) => t, lock: true, force: true, onComplete: endStep });
 }
 function nextStop(y, dir) {
   if (dir > 0) { for (let k = 0; k <= LAST; k++) if (stopPx(k) > y + 2) return k; return -1; }
   for (let k = LAST; k >= 0; k--) if (stopPx(k) < y - 2) return k; return -1;
 }
 function onVirtual({ deltaY, event }) {
-  if (!live) { if (booted && Math.abs(deltaY) > 1) startExperience(); event.cancelable && event.preventDefault(); return false; }
+  if (!live) { if (booted && Math.abs(deltaY) > 1) startExperience(); blockNativeScroll(event); return false; }
   if (menuOpen || modalOpen) return false;
   const y = lenis.animatedScroll;
   const zoneEnd = stopPx(LAST);
   const isTouch = event.type.includes('touch');
-  if (stepping) { event.cancelable && event.preventDefault(); return false; }
-  if (Math.abs(deltaY) < (isTouch ? 6 : 1)) { if (y < zoneEnd - 2 && event.cancelable) event.preventDefault(); return y >= zoneEnd - 2; }
+  if (stepping) { blockNativeScroll(event); return false; }
+  if (Math.abs(deltaY) < (isTouch ? 6 : 1)) { if (y < zoneEnd - 2) blockNativeScroll(event); return y >= zoneEnd - 2; }
   const dir = Math.sign(deltaY);
   if (y < zoneEnd - 2 || (Math.abs(y - zoneEnd) <= 2 && dir < 0)) {
-    event.cancelable && event.preventDefault();
+    blockNativeScroll(event);
     const k = nextStop(y, dir); if (k >= 0) stepTo(k);
     return false;
   }
   // tail: snap back into the scene zone when scrolling up past it
-  if (dir < 0 && lenis.targetScroll + deltaY < zoneEnd) { event.cancelable && event.preventDefault(); stepTo(LAST); return false; }
+  if (dir < 0 && lenis.targetScroll + deltaY < zoneEnd) { blockNativeScroll(event); stepTo(LAST); return false; }
   return true;
 }
 addEventListener('keydown', (e) => {
@@ -191,9 +205,10 @@ function jumpToScene(idx) {
   const stage = $('#stage');
   stepping = true;
   stage.style.opacity = '0';
-  setTimeout(() => {
-    lenis.scrollTo(stopPx(k), { duration: 0.75, lock: true, force: true, onComplete: () => { stepping = false; } });
-    setTimeout(() => requestAnimationFrame(() => (stage.style.opacity = '1')), 750);
+  jumpTimer = setTimeout(() => {
+    jumpTimer = 0;
+    lenis.scrollTo(stopPx(k), { duration: 0.75, lock: true, force: true, onComplete: endStep });
+    jumpFadeTimer = setTimeout(() => requestAnimationFrame(() => { jumpFadeTimer = 0; stage.style.opacity = '1'; }), 750);
   }, 150);
 }
 
@@ -209,15 +224,15 @@ document.addEventListener('click', (e) => {
     else jumpToScene(SCENES.findIndex((s) => s.id === t));
   }
 });
-$('#logo').addEventListener('click', () => { lenis.scrollTo(0, { immediate: true, force: true }); });
+$('#logo').addEventListener('click', () => { endStep(); lenis.scrollTo(0, { immediate: true, force: true }); });
 
 /* ------------------------------------------------------------ menu / modal */
 let menuOpen = false, modalOpen = false;
 const menu = $('#menu'), modal = $('#modal');
-$('#burger').addEventListener('click', () => { menuOpen = true; menu.classList.add('is-open'); menu.setAttribute('aria-hidden', 'false'); lenis.stop(); });
+$('#burger').addEventListener('click', () => { endStep(); menuOpen = true; menu.classList.add('is-open'); menu.setAttribute('aria-hidden', 'false'); lenis.stop(); });
 menu.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeMenu));
 function closeMenu() { if (!menuOpen) return; menuOpen = false; menu.classList.remove('is-open'); menu.setAttribute('aria-hidden', 'true'); if (live) lenis.start(); }
-function openModal() { modalOpen = true; modal.classList.add('is-open'); modal.setAttribute('aria-hidden', 'false'); lenis.stop(); setTimeout(() => $('#f-name').focus(), 300); }
+function openModal() { endStep(); modalOpen = true; modal.classList.add('is-open'); modal.setAttribute('aria-hidden', 'false'); lenis.stop(); setTimeout(() => $('#f-name').focus(), 300); }
 function closeModal() { if (!modalOpen) return; modalOpen = false; modal.classList.remove('is-open'); modal.setAttribute('aria-hidden', 'true'); if (live) lenis.start(); }
 modal.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeModal));
 $('#contact-form').addEventListener('submit', (e) => {
