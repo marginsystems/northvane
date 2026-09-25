@@ -842,7 +842,13 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
 
   /* ---------- Tail views ---------- */
   let views = null;
-  const getViews = () => views || (views = makeViews(env));
+  const getViews = () => {
+    if (views) return views;
+    views = makeViews(env);
+    // Tail views draw to the canvas, so the default (no target) variants are the ones used.
+    try { views.compile(renderer); } catch (_) { /* compile on first draw */ }
+    return views;
+  };
 
   onProgress(0.9); await tick();
 
@@ -1113,8 +1119,23 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
   }
 
   function setPixelRatio(pr) { renderer.setPixelRatio(pr); resize(state.w, state.h); }
-  // compile programs in parallel (KHR_parallel_shader_compile) so the first frame doesn't stall
-  try { await Promise.all([renderer.compileAsync(sceneA, camA), renderer.compileAsync(sceneB, camB), renderer.compileAsync(compScene, compCam)]); } catch (_) { /* older drivers: compile on first draw */ }
+  // Upload the big maps before the first draw so that frame is not also a texture stall.
+  for (const tex of [terrain.uniforms.tAlb.value, terrain.uniforms.tLight.value, terrain.uniforms.tNrm.value, decalTex, cloudTex]) {
+    if (tex) renderer.initTexture(tex);
+  }
+  // Program cache key includes the bound target. Scene A/B are only ever drawn into half-float
+  // targets (no tone mapping, linear output). Compiling with the screen target builds variants
+  // the first frame cannot reuse.
+  try {
+    renderer.setRenderTarget(rtA);
+    const compileA = renderer.compileAsync(sceneA, camA);
+    renderer.setRenderTarget(rtB);
+    const compileB = renderer.compileAsync(sceneB, camB);
+    renderer.setRenderTarget(null);
+    const compileC = renderer.compileAsync(compScene, compCam);
+    await Promise.all([compileA, compileB, compileC]);
+  } catch (_) { /* older drivers: compile on first draw */ }
+  renderer.setRenderTarget(null);
   onProgress(1);
   return { renderer, update, render, resize, state, project, bake, keysA, getViews, setPixelRatio };
 }
@@ -1222,6 +1243,7 @@ function makeViews(env) {
     shadow.position.y = -3.18; shadow.scale.set(1.4, 1, 1); scene.add(shadow);
     const aim = new THREE.Vector3(), right = new THREE.Vector3();
     views.auto = {
+      scene, cam,
       render(renderer, rect, p, T, ptr) {
         cam.aspect = rect.width / rect.height;
         const narrow = cam.aspect < 1;
@@ -1254,6 +1276,7 @@ function makeViews(env) {
     const floorMat = gridMaterial(); floorMat.uniforms.uRad.value = 70;
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), floorMat); floor.rotation.x = 0; floor.position.y = -0.02; floor.geometry.rotateX(-Math.PI / 2); floor.scale.setScalar(0.18); scene.add(floor);
     views.land = {
+      scene, cam,
       render(renderer, rect, p, T) {
         cam.aspect = rect.width / rect.height; cam.updateProjectionMatrix();
         // p: 0 = drone high above (over founders), 1 = landed in footer
@@ -1268,6 +1291,14 @@ function makeViews(env) {
       },
     };
   }
+  views.compile = (gl) => {
+    const prev = gl.getRenderTarget();
+    gl.setRenderTarget(null);
+    gl.compile(views.globe.scene, views.globe.cam);
+    gl.compile(views.auto.scene, views.auto.cam);
+    gl.compile(views.land.scene, views.land.cam);
+    gl.setRenderTarget(prev);
+  };
   return views;
 }
 
