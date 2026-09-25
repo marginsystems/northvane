@@ -136,8 +136,10 @@ layout();
 const stopPx = (k) => (STOPS[k] * VH) / 100;
 const LAST = 14; // multi-threat stop — free scroll after this
 
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false, virtualScroll: onVirtual });
 lenis.stop();
+if (!params.has('stop') && !params.has('t')) lenis.scrollTo(0, { immediate: true, force: true });
 let stepping = false;
 let booted = false;
 let live = false;
@@ -271,6 +273,11 @@ function setProgress(p) { bootBar.style.transform = `scaleX(${p})`; }
 
 async function init() {
   setProgress(0.08);
+  bootLabel.textContent = 'Building scene';
+  // The boot drone is its own WebGL context. Drop it before the main one,
+  // or the scene compile falls back to a slow software context.
+  bootDrone?.dispose();
+  bootDrone = null;
   try {
     world = await createWorld($('#gl'), { onProgress: (p) => setProgress(0.1 + p * 0.85) });
   } catch (err) {

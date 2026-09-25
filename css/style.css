@@ -15,7 +15,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { background: var(--black); color: var(--white); -webkit-font-smoothing: antialiased; }
+html { background: var(--black); color: var(--white); -webkit-font-smoothing: antialiased; overflow-anchor: none; }
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 .lenis.lenis-stopped { overflow: hidden; }
