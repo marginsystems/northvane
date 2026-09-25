@@ -53,7 +53,12 @@ function northvaneAssets() {
     name: 'northvane-assets',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const url = decodeURIComponent((req.url || '').split('?')[0]);
+        let url;
+        try {
+          url = decodeURIComponent((req.url || '').split('?')[0]);
+        } catch {
+          return next();
+        }
         if (!url.startsWith('/assets/')) return next();
         const file = join(server.config.root, url.slice(1));
         const root = join(server.config.root, 'assets') + sep;
