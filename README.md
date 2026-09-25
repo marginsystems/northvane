@@ -84,7 +84,7 @@ tools/gen_terrain.py  offline terrain generator
 
 This is a design-engineering study. The page structure, scroll pacing and interaction model are modelled on [usavionix.com](https://www.usavionix.com/), a site worth visiting. Northvane, its copy, and every 3D asset and image in this repo are original. This project is not affiliated with USAvionix. The founders' logos are fictional wordmarks, and the contact form is a demo that sends nothing.
 
-Type is [Geist and Geist Mono](https://vercel.com/font) (SIL OFL), loaded from Google Fonts. Bundled libraries: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Type is [Geist and Geist Mono](https://vercel.com/font) (SIL OFL), bundled in `fonts/` (Latin subset). Bundled libraries: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## License
 
