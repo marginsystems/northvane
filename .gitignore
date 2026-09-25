@@ -1,0 +1,13 @@
+# local deploy state and secrets
+.vercel/
+.env*
+
+# private marketing drafts
+contra/
+
+# tooling
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

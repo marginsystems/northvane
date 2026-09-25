@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Northvane | Autonomous Jet Aircraft for Wide-Area Watch</title>
+  <meta name="description" content="Northvane builds jet-powered autonomous aircraft and the Meridian AI command layer for wide-area surveillance and emergency response." />
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="modulepreload" href="js/main.js" />
+  <link rel="modulepreload" href="js/world.js" />
+  <link rel="modulepreload" href="js/content.js" />
+  <link rel="modulepreload" href="js/vendor/three.module.min.js" />
+  <link rel="modulepreload" href="js/vendor/lenis.mjs" />
+  <link rel="preload" href="assets/terrain/height.bin" as="fetch" crossorigin />
+  <link rel="preload" href="assets/terrain/meta.json" as="fetch" crossorigin />
+  <link rel="preload" href="assets/terrain/albedo.jpg" as="image" />
+  <link rel="preload" href="assets/terrain/light.jpg" as="image" />
+</head>
+<body class="is-booting">
+
+  <!-- Boot splash -->
+  <div id="boot" aria-hidden="true">
+    <canvas id="boot-canvas"></canvas>
+    <div class="boot-status">
+      <div class="boot-bar"><i></i></div>
+      <div class="boot-label mono">Loading assets</div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="nav" id="nav">
+    <button class="nav-logo" id="logo" aria-label="Northvane home">
+      <svg class="logo-full" viewBox="0 0 150 24" aria-hidden="true"><text x="0" y="19">Northvane</text></svg>
+    </button>
+    <nav class="scene-nav" id="scene-nav" aria-label="Sections"></nav>
+    <div class="nav-right">
+      <button class="pill pill-sm" data-contact>Contact</button>
+      <button class="burger" id="burger" aria-label="Open menu"><i></i><i></i><i></i></button>
+    </div>
+  </header>
+
+  <!-- Fixed stage: WebGL + scene overlays -->
+  <div id="stage">
+    <canvas id="gl"></canvas>
+    <div id="labels" class="labels"></div>
+    <svg id="lines" class="lines" aria-hidden="true"></svg>
+    <div id="overlay" class="overlay"></div>
+  </div>
+
+  <main id="main">
+    <div id="scroll-spacer"></div>
+
+    <section id="cases" class="cases">
+      <h2 class="h3 cases-title">One platform, many missions.</h2>
+      <div class="cases-row" id="cases-row"></div>
+    </section>
+
+    <section id="globe" class="globe-sec">
+      <h2 class="h2 globe-text" id="globe-text"></h2>
+      <div class="view globe-view" id="globe-view"></div>
+      <div class="globe-labels" id="globe-labels"></div>
+    </section>
+
+    <section id="autonomy" class="autonomy">
+      <div class="view auto-view" id="auto-view"></div>
+      <div class="auto-copy">
+        <h2 class="h3b" id="auto-title"></h2>
+        <p class="body-l" id="auto-body"></p>
+        <button class="pill" data-contact id="auto-cta"></button>
+      </div>
+    </section>
+
+    <section id="founders" class="founders">
+      <p class="body-s founders-text" id="founders-text"></p>
+      <div class="logos" id="logos"></div>
+    </section>
+
+    <footer class="footer" id="footer">
+      <div class="footer-mark" aria-hidden="true">
+        <svg viewBox="0 0 1400 220" preserveAspectRatio="xMidYMid meet">
+          <g fill="none" stroke="currentColor" stroke-width="3">
+            <path d="M40 190 A95 95 0 0 1 230 190" />
+            <path d="M80 190 L135 150 L190 190" />
+            <path d="M80 160 L135 120 L190 160" />
+          </g>
+          <text x="265" y="190" fill="none" stroke="currentColor" stroke-width="3">Northvane</text>
+        </svg>
+      </div>
+      <div class="view land-view" id="land-view"></div>
+      <div class="footer-bottom">
+        <div class="footer-cta">
+          <p class="h3" id="footer-cta"></p>
+          <button class="pill pill-sm" data-contact id="footer-btn"></button>
+        </div>
+        <p class="mono footer-copy" id="footer-copy"></p>
+        <div class="footer-links" id="footer-links"></div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Menu drawer -->
+  <div class="menu" id="menu" aria-hidden="true">
+    <div class="menu-scrim" data-close></div>
+    <aside class="menu-panel">
+      <button class="menu-close" data-close aria-label="Close menu">
+        <svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <ul class="menu-links" id="menu-links"></ul>
+      <div class="menu-extras" id="menu-extras"></div>
+    </aside>
+  </div>
+
+  <!-- Contact modal -->
+  <div class="modal" id="modal" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+    <div class="modal-scrim" data-close></div>
+    <div class="modal-panel">
+      <button class="menu-close" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <h2 class="h2" id="modal-title">Contact Us</h2>
+      <form class="form" id="contact-form" novalidate>
+        <div class="field"><label for="f-name">Name</label><input id="f-name" name="name" maxlength="120" required /><span class="err"></span></div>
+        <div class="field"><label for="f-company">Company</label><input id="f-company" name="company" maxlength="160" required /><span class="err"></span></div>
+        <div class="field"><label for="f-email">Email</label><input id="f-email" name="email" type="email" maxlength="254" required /><span class="err"></span></div>
+        <div class="field"><label for="f-msg">Message</label><textarea id="f-msg" name="message" maxlength="4000" rows="4" required></textarea><span class="err"></span></div>
+        <button class="pill submit" type="submit">Submit Form <span class="arr">→</span></button>
+        <p class="form-note mono" id="form-note"></p>
+      </form>
+    </div>
+  </div>
+
+  <div class="grain" aria-hidden="true"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

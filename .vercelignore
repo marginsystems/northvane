@@ -1,0 +1,5 @@
+tools/
+.vercel/
+*.py
+.env*
+contra/
