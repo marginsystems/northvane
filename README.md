@@ -14,13 +14,12 @@ Northvane is a fictional autonomous-aircraft company. The page tells one mission
 
 ## Run it locally
 
-It's a static site with no build step and no npm install.
-
 ```bash
-python -m http.server 5194
+npm install
+npm run dev
 ```
 
-Then open http://localhost:5194. Any static server works; it needs HTTP (not `file://`) because it loads ES modules and fetches the terrain data.
+Then open http://localhost:5194. The page needs HTTP (not `file://`) because it loads ES modules and fetches the terrain data. `npm run build` writes a static `dist/` for hosting.
 
 Debug URL parameters:
 
@@ -68,6 +67,8 @@ At runtime the terrain is loaded at half scale and mirror-tiled 5×5, with low-r
 ## Project layout
 
 ```
+package.json          npm run dev / npm run build
+vite.config.js        dev server on port 5194, copies assets into dist
 index.html            shell, preloads
 css/style.css         design tokens, type scale, layout, responsive rules
 js/content.js         every string on the page (rebrand here)
