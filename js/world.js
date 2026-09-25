@@ -1315,31 +1315,3 @@ function makeViews(env) {
   };
   return views;
 }
-
-/* ------------------------------------------------------------ boot drone */
-export function createBoot(canvas) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  const scene = new THREE.Scene();
-  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-  const d = makeDrone({ lod: 'high' });
-  d.traverse((o) => { if (o.isMesh) o.material = new THREE.MeshLambertMaterial({ color: 0x2d302e, transparent: true, opacity: 0.8 }); if (o.isSprite) o.visible = false; });
-  scene.add(d);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-  const l = new THREE.DirectionalLight(0xd8d4c0, 1.2); l.position.set(-3, 6, 2); scene.add(l);
-  d.rotation.set(0.35, 0.95, -0.3, 'YXZ');
-  cam.position.set(-8, 22, 18); cam.lookAt(0.8, -0.8, -0.6);
-  let raf = 0, alive = true;
-  const loop = (t) => {
-    if (!alive) return;
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    if (canvas.width !== Math.floor(w * renderer.getPixelRatio())) renderer.setSize(w, h, false);
-    cam.aspect = w / h; cam.fov = w < 768 ? 48 : 30; cam.updateProjectionMatrix();
-    d.position.y = Math.sin(t * 0.0008) * 0.15;
-    renderer.render(scene, cam);
-    raf = requestAnimationFrame(loop);
-  };
-  raf = requestAnimationFrame(loop);
-  return { dispose() { alive = false; cancelAnimationFrame(raf); renderer.dispose(); renderer.forceContextLoss?.(); } };
-}
