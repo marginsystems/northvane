@@ -149,7 +149,15 @@ function blockNativeScroll(event) {
   if (event.type === 'touchstart' || event.type === 'touchend') return;
   event.cancelable && event.preventDefault();
 }
-function endStep() { stepping = false; }
+let jumpTimer = 0;
+let jumpFadeTimer = 0;
+function endStep() {
+  stepping = false;
+  if (jumpTimer) { clearTimeout(jumpTimer); jumpTimer = 0; }
+  if (jumpFadeTimer) { clearTimeout(jumpFadeTimer); jumpFadeTimer = 0; }
+  const stage = $('#stage');
+  if (stage) stage.style.opacity = '1';
+}
 function stepTo(k, fast = false) {
   const y = lenis.animatedScroll;
   const target = stopPx(k);
@@ -197,9 +205,10 @@ function jumpToScene(idx) {
   const stage = $('#stage');
   stepping = true;
   stage.style.opacity = '0';
-  setTimeout(() => {
-    lenis.scrollTo(stopPx(k), { duration: 0.75, lock: true, force: true, onComplete: () => { stepping = false; } });
-    setTimeout(() => requestAnimationFrame(() => (stage.style.opacity = '1')), 750);
+  jumpTimer = setTimeout(() => {
+    jumpTimer = 0;
+    lenis.scrollTo(stopPx(k), { duration: 0.75, lock: true, force: true, onComplete: endStep });
+    jumpFadeTimer = setTimeout(() => requestAnimationFrame(() => { jumpFadeTimer = 0; stage.style.opacity = '1'; }), 750);
   }, 150);
 }
 
