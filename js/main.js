@@ -1,5 +1,5 @@
 import Lenis from './vendor/lenis.mjs';
-import { createWorld, createBoot, STOPS } from './world.js';
+import { createWorld, STOPS } from './world.js';
 import { SCENES, MAP_TAGS, MULTI_TAGS, SERVICE_TAGS, DETECT_LABELS, USE_CASES, GLOBE_TEXT, GLOBE_EVENTS, AUTONOMY, FOUNDERS, MENU, FOOTER } from './content.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -136,8 +136,10 @@ layout();
 const stopPx = (k) => (STOPS[k] * VH) / 100;
 const LAST = 14; // multi-threat stop — free scroll after this
 
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false, virtualScroll: onVirtual });
 lenis.stop();
+if (!params.has('stop') && !params.has('t')) lenis.scrollTo(0, { immediate: true, force: true });
 let stepping = false;
 let booted = false;
 let live = false;
@@ -262,8 +264,6 @@ document.addEventListener('visibilitychange', () => { if (!audio) return; docume
 const boot = $('#boot');
 const bootBar = $('.boot-bar i');
 const bootLabel = $('.boot-label');
-let bootDrone = null;
-if (!params.has('bake')) { try { bootDrone = createBoot($('#boot-canvas')); } catch (_) { /* no webgl */ } }
 let world = null;
 const t0 = performance.now();
 
@@ -271,6 +271,7 @@ function setProgress(p) { bootBar.style.transform = `scaleX(${p})`; }
 
 async function init() {
   setProgress(0.08);
+  bootLabel.textContent = 'Building scene';
   try {
     world = await createWorld($('#gl'), { onProgress: (p) => setProgress(0.1 + p * 0.85) });
   } catch (err) {
@@ -297,7 +298,7 @@ function startExperience(instant = false) {
   if (live) return;
   live = true;
   boot.classList.add('is-done');
-  setTimeout(() => { bootDrone?.dispose(); boot.remove(); }, 900);
+  setTimeout(() => { boot.remove(); }, 900);
   document.body.classList.remove('is-booting');
   document.body.classList.add('is-live');
   lenis.start();
