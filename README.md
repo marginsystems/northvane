@@ -63,6 +63,7 @@ At runtime the terrain is loaded at half scale and mirror-tiled 5×5, with low-r
 
 **Performance.**
 - Programs are precompiled with `renderer.compileAsync`.
+- The landing view keeps the close-up's directional-light count, with the extra light at zero intensity, so those materials share programs.
 - Tail views are built lazily.
 - Render resolution adapts between 0.75× and 1.5× DPR based on measured frame time.
 - The terrain's detail is pre-baked, so the fragment shader stays cheap.
