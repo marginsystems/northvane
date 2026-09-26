@@ -282,6 +282,7 @@ const bootLabel = $('.boot-label');
 let world = null;
 const t0 = performance.now();
 
+function setProgress(p) { bootBar.style.transform = `scaleX(${p})`; }
 function paintPerf() {
   if (!params.has('perf') || !world?.perf) return;
   let el = document.getElementById('perf');
