@@ -2,6 +2,7 @@
 // World A = photographic-ish terrain flight, World B = tactical map, plus tail "views"
 // (globe / close-up / landing) rendered into DOM rects with scissor. No external models.
 import * as THREE from './vendor/three.module.min.js';
+import { bakeNormals } from './normals.js';
 
 /* ------------------------------------------------------------------ noise */
 function mulberry(seed) { return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -79,16 +80,42 @@ float snoise(vec2 v){
 float fbm4(vec2 p){ float a=.5,s=0.; for(int i=0;i<4;i++){ s+=a*snoise(p); p=p*2.03+vec2(17.1,3.7); a*=.5; } return s; }
 `;
 
-function normalTexture() {
-  const N = HN, cell = TERRAIN_SIZE / N, d = new Uint8Array(N * N * 4);
-  for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
-    const l = HM[z * N + Math.max(0, x - 1)], r = HM[z * N + Math.min(N - 1, x + 1)];
-    const u = HM[Math.max(0, z - 1) * N + x], dn = HM[Math.min(N - 1, z + 1) * N + x];
-    let nx = -(r - l) / (2 * cell), nz = -(dn - u) / (2 * cell), ny = 1; const L = Math.hypot(nx, ny, nz);
-    const i = (z * N + x) * 4; d[i] = ((nx / L) * 0.5 + 0.5) * 255; d[i + 1] = ((ny / L) * 0.5 + 0.5) * 255; d[i + 2] = ((nz / L) * 0.5 + 0.5) * 255; d[i + 3] = 255;
-  }
-  const t = new THREE.DataTexture(d, N, N, THREE.RGBAFormat); t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = 8; t.needsUpdate = true;
+function textureFromNormals(d) {
+  const t = new THREE.DataTexture(d, HN, HN, THREE.RGBAFormat);
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.generateMipmaps = true;
+  t.anisotropy = 8;
+  t.needsUpdate = true;
   return t;
+}
+function bakeNormalsOffThread(hm, N, cell) {
+  return new Promise((resolve, reject) => {
+    let worker;
+    try {
+      worker = new Worker(new URL('./normal.worker.js', import.meta.url), { type: 'module' });
+    } catch (err) {
+      reject(err);
+      return;
+    }
+    const timer = setTimeout(() => { worker.terminate(); reject(new Error('normals timed out')); }, 4000);
+    worker.onmessage = (e) => { clearTimeout(timer); worker.terminate(); resolve(e.data); };
+    worker.onerror = () => { clearTimeout(timer); worker.terminate(); reject(new Error('normals worker failed')); };
+    const copy = new Float32Array(hm);
+    worker.postMessage({ hm: copy, N, cell }, [copy.buffer]);
+  });
+}
+async function normalTexture() {
+  const N = HN;
+  const cell = TERRAIN_SIZE / N;
+  let d;
+  try {
+    d = await bakeNormalsOffThread(HM, N, cell);
+    if (!(d instanceof Uint8Array) || d.length !== N * N * 4) throw new Error('normals short');
+  } catch {
+    d = bakeNormals(HM, N, cell);
+  }
+  return textureFromNormals(d);
 }
 
 async function loadTerrainMap(url, srgb) {
@@ -111,7 +138,7 @@ async function makeTerrain(renderer) {
   const aniso = renderer.capabilities.getMaxAnisotropy();
   alb.anisotropy = aniso;
   light.anisotropy = aniso;
-  const nrm = normalTexture(); nrm.anisotropy = aniso;
+  const nrm = await normalTexture(); nrm.anisotropy = aniso;
   const geo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_SEG, TERRAIN_SEG);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position;
