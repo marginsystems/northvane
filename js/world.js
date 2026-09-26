@@ -874,7 +874,7 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5,
   }));
   const compScene = new THREE.Scene(); compScene.add(comp);
   const compCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  stage('composite');
+  stage('map');
 
   /* ---------- Tail views ---------- */
   let views = null;
