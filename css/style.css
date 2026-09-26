@@ -73,6 +73,11 @@ p, h1, h2, h3 { margin: 0; font-weight: inherit; }
 .boot-bar i { display: block; height: 100%; width: 100%; background: rgba(255,255,255,.6); transform-origin: 0 50%; transform: scaleX(0); transition: transform .4s linear; }
 .boot-label { color: rgba(255,255,255,.4); letter-spacing: .3em; font-size: 11px; transition: color .5s; }
 #boot.is-ready .boot-label { color: rgba(255,255,255,.55); }
+#perf {
+  position: fixed; left: 12px; bottom: 12px; z-index: 950; margin: 0; padding: 8px 10px;
+  background: rgba(0,0,0,.72); color: #fff; font: 12px/1.45 ui-monospace, monospace;
+  pointer-events: none; white-space: pre;
+}
 
 /* ---------- Header ---------- */
 .nav {

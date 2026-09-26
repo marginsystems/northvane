@@ -26,6 +26,7 @@ Debug URL parameters:
 | Param | Effect |
 |---|---|
 | `?stop=N` | Skip the loader and jump to scene rest point `N` (0–14) |
+| `?perf` | Show boot stage times and the WebGL program count |
 | `?t=VH` | Jump to an exact scroll position, in viewport-heights |
 | `?view=auto&p=0.5` | Render one tail view (`globe`, `auto`, `land`) full screen at progress `p` |
 | `?bake=wildfire\|border\|grid` | Render a use-case card image from the 3D scene |

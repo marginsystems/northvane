@@ -282,18 +282,25 @@ const bootLabel = $('.boot-label');
 let world = null;
 const t0 = performance.now();
 
-function setProgress(p) { bootBar.style.transform = `scaleX(${p})`; }
+function paintPerf() {
+  if (!params.has('perf') || !world?.perf) return;
+  let el = document.getElementById('perf');
+  if (!el) { el = document.createElement('pre'); el.id = 'perf'; document.body.appendChild(el); }
+  const lines = world.perf.stages.map((s) => `${s.name.padEnd(10)} ${s.ms} ms`);
+  lines.push(`${'programs'.padEnd(10)} ${world.perf.programs()}`);
+  el.textContent = lines.join('\n');
+}
 
 async function init() {
   setProgress(0.08);
   bootLabel.textContent = 'Building scene';
   try {
-    world = await createWorld($('#gl'), { onProgress: (p) => setProgress(0.1 + p * 0.85) });
+    world = await createWorld($('#gl'), { perf: params.has('perf'), onProgress: (p) => setProgress(0.1 + p * 0.85) });
   } catch (err) {
     console.error(err);
     bootLabel.textContent = 'WebGL unavailable';
   }
-  if (world) { world.resize(innerWidth, innerHeight); world.update(0.016); world.render([]); }
+  if (world) { world.resize(innerWidth, innerHeight); world.update(0.016); world.render([]); paintPerf(); }
   if (params.has('bake')) return bakeMode();
   if (params.has('view')) return viewMode();
   const wait = params.has('stop') || params.has('t') ? 0 : Math.max(0, 900 - (performance.now() - t0));
@@ -305,7 +312,7 @@ async function init() {
     if (params.has('stop') || params.has('t')) startExperience(true);
     else setTimeout(() => { if (!live) startExperience(); }, 1400); // enter on its own if nobody scrolls
     // build the tail views while the visitor is still on the first scenes
-    (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => world.getViews());
+    (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => { world.getViews(); paintPerf(); });
   }, wait);
 }
 
