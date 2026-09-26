@@ -1,6 +1,8 @@
 import Lenis from './vendor/lenis.mjs';
 import { createWorld, STOPS } from './world.js';
-import { SCENES, MAP_TAGS, MULTI_TAGS, SERVICE_TAGS, DETECT_LABELS, USE_CASES, GLOBE_TEXT, GLOBE_EVENTS, AUTONOMY, FOUNDERS, MENU, FOOTER } from './content.js';
+import { SCENES, MAP_TAGS, MENU } from './content.js';
+import { bridge } from './bridge.js';
+import { mountStory, mountTail } from './story.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -18,12 +20,6 @@ const ICON = {
 };
 
 /* ------------------------------------------------------------ helpers */
-function splitChars(html) {
-  // returns markup of words -> chars, keeps <br>
-  return html.split(/<br\s*\/?>/i).map((line) => line.split(' ').map((w) =>
-    `<span style="display:inline-block;white-space:nowrap">${[...w].map((c) => `<span class="char">${c}</span>`).join('')}</span>`
-  ).join('<span class="char"> </span>')).join('<br>');
-}
 function revealChars(root, total = 0.35, base = 0) {
   const chars = [...root.querySelectorAll('.char')];
   const order = chars.map((_, i) => i);
@@ -33,99 +29,15 @@ function revealChars(root, total = 0.35, base = 0) {
   return timers;
 }
 function hideChars(root) { root.querySelectorAll('.char.on').forEach((c) => c.classList.remove('on')); }
-function hudLine(item) {
-  if (Array.isArray(item[0])) return item[0].map(([t, c]) => `<span class="${c ? 'c-' + c : ''}">${t}</span>`).join('');
-  const [t, c] = item; return `<span class="${c ? 'c-' + c : ''}">${t}</span>`;
-}
 
-/* ------------------------------------------------------------ build DOM */
-const overlay = $('#overlay');
-const sceneEls = SCENES.map((s, idx) => {
-  const el = document.createElement('div');
-  el.className = 'sc' + (s.hud ? ' has-hud' : '');
-  el.dataset.id = s.id;
-  let html = '';
-  if (s.title) {
-    html += `<div class="sc-title"><h1 class="${s.titleClass || 'h0'} t">${splitChars(s.title)}</h1>${s.badge ? `<span class="badge ${s.badge.color}">${s.badge.text}</span>` : ''}</div>`;
-  }
-  if (s.body) {
-    html += `<div class="sc-body pos-${s.bodyPos}"><p class="h3">${s.body}</p>`;
-    if (s.table) html += `<div class="sc-table body-l">${s.table.map(([a, b]) => `<div class="row"><span>${a}</span><span>${b}</span></div>`).join('')}</div>`;
-    if (s.cta) html += `<button class="pill" data-action="${s.cta.action}">${s.cta.label}${ICON[s.cta.icon]}</button>`;
-    html += '</div>';
-  }
-  if (s.hud) html += `<div class="hud mono">${s.hud.map((l) => `<div class="ln">${hudLine(l)}</div>`).join('')}</div>`;
-  if (s.callouts) html += s.callouts.map((c, i) => `<div class="callout ${c.side}" data-i="${i}"><span class="v">${splitChars(c.value)}</span> <span class="k">${splitChars(c.label)}</span></div>`).join('');
-  el.innerHTML = html;
-  overlay.appendChild(el);
-  return el;
-});
+const {
+  sceneEls, droneTags, swarmPath, calloutLines, dboxes, chipMain, svcTags, multiChips, sceneNav, navItems, navLabels,
+} = mountStory(document, { icons: ICON, onJump: (idx) => jumpToScene(idx) });
+const { globeLabels, views } = mountTail(document, { icons: ICON });
 
-// projected label layers
-const labels = $('#labels');
-const lines = $('#lines');
-const droneTags = SCENES[2].tags.map((t) => { const d = document.createElement('div'); d.className = 'tag tag-drone'; d.textContent = t; d.style.opacity = 0; labels.appendChild(d); return d; });
-const swarmPath = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-swarmPath.setAttribute('fill', 'none'); swarmPath.setAttribute('stroke', 'rgba(255,255,255,.75)'); swarmPath.setAttribute('stroke-dasharray', '3 4'); swarmPath.setAttribute('stroke-width', '1'); swarmPath.style.opacity = 0; swarmPath.style.transition = 'opacity .5s';
-lines.appendChild(swarmPath);
-const calloutLines = SCENES[1].callouts.map(() => {
-  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line'); l.setAttribute('stroke', 'rgba(255,255,255,.55)'); l.setAttribute('stroke-width', '1');
-  const c = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); c.setAttribute('width', 4); c.setAttribute('height', 4); c.setAttribute('fill', '#fff');
-  g.append(l, c); g.style.opacity = 0; g.style.transition = 'opacity .4s'; lines.appendChild(g); return { g, l, c, len: 0 };
-});
-const dboxes = DETECT_LABELS.map((t) => { const d = document.createElement('div'); d.className = 'dbox'; d.innerHTML = `<span>${t} ${80 + Math.floor(Math.random() * 5)}%</span>`; labels.appendChild(d); return d; });
-const chipMain = document.createElement('div'); chipMain.className = 'tag tag-chip yellow'; chipMain.style.opacity = 0; labels.appendChild(chipMain);
-const svcTags = SERVICE_TAGS.map((t) => { const d = document.createElement('div'); d.className = 'svc'; d.innerHTML = `<span class="svc-l">${t}</span><i class="svc-line"></i><b class="svc-pt"></b>`; labels.appendChild(d); return d; });
-const multiChips = MULTI_TAGS.map((t) => { const d = document.createElement('div'); d.className = `tag tag-chip small ${t.color}`; d.innerHTML = `${ICON.shield}<span>${t.text}</span>`; d.style.opacity = 0; labels.appendChild(d); return d; });
-
-// scene nav ticks
-const navLabels = [...new Set(SCENES.map((s) => s.nav).filter(Boolean))];
-const sceneNav = $('#scene-nav');
-const navItems = navLabels.map((label) => {
-  const b = document.createElement('button'); b.className = 'sn-item'; b.innerHTML = `<i class="tick"></i><span class="lbl">${label}</span>`; b.setAttribute('aria-label', label);
-  b.addEventListener('click', () => jumpToScene(SCENES.findIndex((s) => s.nav === label)));
-  sceneNav.appendChild(b); return b;
-});
-
-// tail content
-const casesRow = $('#cases-row');
-const caseEls = USE_CASES.map((c, i) => {
-  const d = document.createElement('div'); d.className = 'case' + (i === 0 ? ' is-active' : '');
-  d.innerHTML = `<img src="${c.img}" alt="" loading="lazy"><div class="case-copy"><h3>${c.title}</h3><p>${c.text}</p></div>`;
-  d.addEventListener('click', () => caseEls.forEach((e, k) => e.classList.toggle('is-active', k === i)));
-  casesRow.appendChild(d); return d;
-});
-$('#globe-text').textContent = GLOBE_TEXT;
-const globeLabels = GLOBE_EVENTS.map((e) => { const d = document.createElement('div'); d.className = 'glabel'; d.textContent = e.text; d.style.opacity = 0; $('#globe-labels').appendChild(d); return d; });
-$('#auto-title').innerHTML = AUTONOMY.title;
-$('#auto-body').textContent = AUTONOMY.body;
-$('#auto-cta').innerHTML = `${AUTONOMY.cta}${ICON.target}`;
-$('#founders-text').textContent = FOUNDERS.text;
-$('#logos').innerHTML = FOUNDERS.logos.map(logoSVG).join('');
-$('#footer-cta').textContent = FOOTER.cta;
-$('#footer-btn').innerHTML = `${FOOTER.button} ${ICON.right}`;
-$('#footer-copy').textContent = `${FOOTER.copy} ${new Date().getFullYear()}`;
-$('#footer-links').innerHTML = FOOTER.links.map((l) => `<a href="#" data-contact-link>${l}</a>`).join('');
 $('#menu-links').innerHTML = MENU.links.map((l) => `<li><button data-go="${l.go}">${l.label}</button></li>`).join('');
 $('#menu-extras').innerHTML = MENU.extras.map((e) => `<button data-contact><b>${e.title} ${ICON.arrowUR}</b><span>${e.text}</span></button>`).join('');
 document.querySelectorAll('.menu-links button').forEach((b, i) => (b.style.transitionDelay = `${0.1 + i * 0.05}s`));
-
-function logoSVG({ name, style }) {
-  const fonts = {
-    wide: `font-family:var(--sans);font-weight:600;letter-spacing:.32em;font-size:15px`,
-    round: `font-family:var(--sans);font-weight:500;letter-spacing:-.02em;font-size:30px`,
-    mono: `font-family:var(--mono);font-weight:500;letter-spacing:.24em;font-size:16px`,
-    serif: `font-family:Georgia,serif;font-style:italic;font-size:24px`,
-    mark: `font-family:var(--sans);font-weight:600;letter-spacing:.14em;font-size:15px`,
-    thin: `font-family:var(--sans);font-weight:400;letter-spacing:.4em;font-size:14px`,
-    bold: `font-family:var(--sans);font-weight:600;letter-spacing:-.05em;font-size:28px`,
-  };
-  const w = Math.max(120, name.length * (style === 'round' || style === 'bold' ? 16 : 14) + (style === 'wide' || style === 'thin' ? name.length * 5 : 0));
-  const mark = style === 'mark' ? `<path d="M4 26 L14 8 L24 26 Z" fill="none" stroke="currentColor" stroke-width="2"/>` : style === 'round' ? `<circle cx="12" cy="19" r="8" fill="none" stroke="currentColor" stroke-width="2.2"/>` : '';
-  const x = mark ? 34 : 0;
-  return `<svg viewBox="0 0 ${w + x} 38" aria-label="${name}"><g fill="currentColor">${mark}<text x="${x}" y="27" style="${fonts[style]}">${name}</text></g></svg>`;
-}
 
 /* ------------------------------------------------------------ scroll */
 let VH = innerHeight;
@@ -138,11 +50,11 @@ const LAST = 14; // multi-threat stop — free scroll after this
 
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false, virtualScroll: onVirtual });
+bridge.lenis = lenis;
 lenis.stop();
 if (!params.has('stop') && !params.has('t')) lenis.scrollTo(0, { immediate: true, force: true });
 let stepping = false;
 let booted = false;
-let live = false;
 
 function blockNativeScroll(event) {
   // Cancelling touchstart or touchend suppresses the click that follows. Only touchmove and wheel should be blocked.
@@ -173,8 +85,8 @@ function nextStop(y, dir) {
   for (let k = LAST; k >= 0; k--) if (stopPx(k) < y - 2) return k; return -1;
 }
 function onVirtual({ deltaY, event }) {
-  if (!live) { if (booted && Math.abs(deltaY) > 1) startExperience(); blockNativeScroll(event); return false; }
-  if (menuOpen || modalOpen) return false;
+  if (!bridge.live) { if (booted && Math.abs(deltaY) > 1) startExperience(); blockNativeScroll(event); return false; }
+  if (bridge.menuOpen || bridge.modalOpen) return false;
   const y = lenis.animatedScroll;
   const zoneEnd = stopPx(LAST);
   const isTouch = event.type.includes('touch');
@@ -192,7 +104,7 @@ function onVirtual({ deltaY, event }) {
 }
 addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { closeMenu(); closeModal(); }
-  if (!live || menuOpen || modalOpen || /INPUT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+  if (!bridge.live || bridge.menuOpen || bridge.modalOpen || /INPUT|TEXTAREA/.test(document.activeElement?.tagName)) return;
   const down = ['ArrowDown', 'PageDown', ' '].includes(e.key), up = ['ArrowUp', 'PageUp'].includes(e.key);
   if (!down && !up) return;
   const y = lenis.animatedScroll, zoneEnd = stopPx(LAST);
@@ -227,13 +139,15 @@ document.addEventListener('click', (e) => {
 $('#logo').addEventListener('click', () => { endStep(); lenis.scrollTo(0, { immediate: true, force: true }); });
 
 /* ------------------------------------------------------------ menu / modal */
-let menuOpen = false, modalOpen = false;
 const menu = $('#menu'), modal = $('#modal');
-$('#burger').addEventListener('click', () => { endStep(); menuOpen = true; menu.classList.add('is-open'); menu.setAttribute('aria-hidden', 'false'); lenis.stop(); });
+$('#burger').addEventListener('click', () => { endStep(); bridge.menuOpen = true; menu.classList.add('is-open'); menu.setAttribute('aria-hidden', 'false'); lenis.stop(); });
 menu.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeMenu));
-function closeMenu() { if (!menuOpen) return; menuOpen = false; menu.classList.remove('is-open'); menu.setAttribute('aria-hidden', 'true'); if (live) lenis.start(); }
-function openModal() { endStep(); modalOpen = true; modal.classList.add('is-open'); modal.setAttribute('aria-hidden', 'false'); lenis.stop(); setTimeout(() => $('#f-name').focus(), 300); }
-function closeModal() { if (!modalOpen) return; modalOpen = false; modal.classList.remove('is-open'); modal.setAttribute('aria-hidden', 'true'); if (live) lenis.start(); }
+function closeMenu() { if (!bridge.menuOpen) return; bridge.menuOpen = false; menu.classList.remove('is-open'); menu.setAttribute('aria-hidden', 'true'); if (bridge.live) lenis.start(); }
+function openModal() { endStep(); bridge.modalOpen = true; modal.classList.add('is-open'); modal.setAttribute('aria-hidden', 'false'); lenis.stop(); setTimeout(() => $('#f-name').focus(), 300); }
+function closeModal() { if (!bridge.modalOpen) return; bridge.modalOpen = false; modal.classList.remove('is-open'); modal.setAttribute('aria-hidden', 'true'); if (bridge.live) lenis.start(); }
+bridge.openModal = openModal;
+bridge.closeMenu = closeMenu;
+bridge.closeModal = closeModal;
 modal.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeModal));
 $('#contact-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -311,15 +225,15 @@ async function init() {
     boot.classList.add('is-ready');
     booted = true;
     if (params.has('stop') || params.has('t')) startExperience(true);
-    else setTimeout(() => { if (!live) startExperience(); }, 1400); // enter on its own if nobody scrolls
+    else setTimeout(() => { if (!bridge.live) startExperience(); }, 1400); // enter on its own if nobody scrolls
     // build the tail views while the visitor is still on the first scenes
     (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(() => { world.getViews(); paintPerf(); });
   }, wait);
 }
 
 function startExperience(instant = false) {
-  if (live) return;
-  live = true;
+  if (bridge.live) return;
+  bridge.live = true;
   boot.classList.add('is-done');
   setTimeout(() => { boot.remove(); }, 900);
   document.body.classList.remove('is-booting');
@@ -330,8 +244,8 @@ function startExperience(instant = false) {
   if (params.has('stop')) lenis.scrollTo(stopPx(+params.get('stop')), { immediate: true, force: true });
   if (params.has('t')) lenis.scrollTo((+params.get('t') * VH) / 100, { immediate: true, force: true });
 }
-['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach((ev) => addEventListener(ev, () => { if (booted && !live) startExperience(); if (live && !audio) initAudio(); }, { passive: true }));
-addEventListener('keydown', () => { if (booted && !live) startExperience(); });
+['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach((ev) => addEventListener(ev, () => { if (booted && !bridge.live) startExperience(); if (bridge.live && !audio) initAudio(); }, { passive: true }));
+addEventListener('keydown', () => { if (booted && !bridge.live) startExperience(); });
 
 function viewMode() {
   // debug: render one tail view full screen, e.g. ?view=auto&p=0.5
@@ -402,11 +316,6 @@ function adaptResolution(dt) {
   else if (avg < 0.0145 && pr < PR_MAX) next = Math.min(PR_MAX, pr + 0.25);
   if (next !== pr) { pr = next; world.setPixelRatio(pr); perfCool = 3; }
 }
-const views = [
-  { name: 'globe', el: $('#globe-view'), sec: $('#globe') },
-  { name: 'auto', el: $('#auto-view'), sec: $('#autonomy') },
-  { name: 'land', el: $('#land-view'), sec: $('#footer') },
-];
 addEventListener('pointermove', (e) => { if (world) world.state.pointer.set((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1); });
 let lastW = innerWidth;
 addEventListener('resize', () => {
@@ -422,17 +331,17 @@ function frame(now) {
   const y = lenis.animatedScroll;
   const v = (y / VH) * 100;
   world.state.v = v;
-  if (world.state.intro < 1 && live) world.state.intro = Math.min(1, world.state.intro + dt / 2.6);
+  if (world.state.intro < 1 && bridge.live) world.state.intro = Math.min(1, world.state.intro + dt / 2.6);
 
   // thermal event timer
-  const thermalActive = live && Math.abs(v - STOPS[6]) < 30;
+  const thermalActive = bridge.live && Math.abs(v - STOPS[6]) < 30;
   world.state.thermalT = thermalActive ? (world.state.thermalT || 0) + dt : 0;
 
   const out = world.update(dt);
 
   // scenes on/off
   let active = -1;
-  if (live) SCENES.forEach((s, k) => { const [a, b] = windows[k]; if (v >= a && v <= b) active = k; });
+  if (bridge.live) SCENES.forEach((s, k) => { const [a, b] = windows[k]; if (v >= a && v <= b) active = k; });
   if (active !== currentScene) {
     if (currentScene >= 0) exitScene(currentScene);
     if (active >= 0) enterScene(active);
@@ -497,3 +406,5 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 init();
+
+if (import.meta.hot) import.meta.hot.decline();
