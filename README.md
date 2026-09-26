@@ -66,6 +66,7 @@ At runtime the terrain is loaded at half scale and mirror-tiled 5×5, with low-r
 - Tail views are built lazily.
 - Render resolution adapts between 0.75× and 1.5× DPR based on measured frame time.
 - The terrain's detail is pre-baked, so the fragment shader stays cheap.
+- The normal map is built from the heightfield on a worker, and on the main thread if that worker does not finish.
 
 ## Project layout
 
@@ -82,6 +83,7 @@ js/story.js           story overlays, filled by mountStory
 js/tail.jsx           lower page in React: cases, globe, autonomy, founders, footer
 js/bridge.js          the one Lenis instance and the menu and modal flags
 js/world.js           terrain + map worlds, keyframes, wipe compositor, tail views
+js/normals.js         heightfield to normal map, on a worker during boot
 js/vendor/            three.js r169, Lenis 1.1.20
 assets/terrain/       baked terrain (height.bin, albedo.jpg, light.jpg, meta.json)
 assets/case-*.jpg     use-case images rendered from the scene (?bake=)
