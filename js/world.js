@@ -327,23 +327,30 @@ function droneDecal() {
 }
 
 let decalTex = null;
-function makeDrone({ env, legs = false, lod = 'high', color = 0x2b2d30 } = {}) {
+let flockWing = null;
+let flockNacelle = null;
+function flockGeometry() {
+  if (flockWing) return { wing: flockWing, nacelle: flockNacelle };
+  const { shape } = planShape();
+  flockWing = new THREE.ExtrudeGeometry(shape, { depth: 0.12, bevelEnabled: false, curveSegments: 4 });
+  flockWing.rotateX(Math.PI / 2);
+  flockWing.translate(0, 0.06, 0);
+  flockNacelle = new THREE.CylinderGeometry(0.55, 0.55, 5.4, 8);
+  return { wing: flockWing, nacelle: flockNacelle };
+}
+function makeDrone({ env, legs = false, lod = 'high', color = 0x2b2d30, material = null } = {}) {
   const root = new THREE.Group();
   const body = new THREE.Group(); root.add(body);
-  const { shape } = planShape();
-  const depth = lod === 'low' ? 0.12 : 0.06;
-  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: lod !== 'low', bevelThickness: 0.09, bevelSize: 0.14, bevelSegments: 3, curveSegments: 4 });
-  geo.rotateX(Math.PI / 2); geo.translate(0, depth / 2, 0);
   if (lod === 'low') {
-    const m = new THREE.MeshLambertMaterial({ color });
-    body.add(new THREE.Mesh(geo, m));
-    const nac = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 5.4, 8), m); nac.rotation.x = Math.PI / 2; nac.position.set(0, 0.4, 0.2); body.add(nac);
+    const { wing, nacelle } = flockGeometry();
+    const m = material || new THREE.MeshLambertMaterial({ color });
+    body.add(new THREE.Mesh(wing, m));
+    const nac = new THREE.Mesh(nacelle, m); nac.rotation.x = Math.PI / 2; nac.position.set(0, 0.4, 0.2); body.add(nac);
     root.userData.materials = [m];
     return root;
   }
   if (!decalTex) decalTex = droneDecal();
   const capMat = new THREE.MeshStandardMaterial({ map: decalTex, metalness: 0.55, roughness: 0.42, envMap: env, envMapIntensity: 1.2 });
-  const sideMat = new THREE.MeshStandardMaterial({ color, metalness: 0.6, roughness: 0.4, envMap: env, envMapIntensity: 1.2 });
   const wing = new THREE.Mesh(wingGeometry(), capMat); body.add(wing);
   // engine nacelle (lathe along z)
   const prof = [[0.0, -3.0], [0.42, -3.0], [0.62, -2.6], [0.72, -1.8], [0.74, 1.4], [0.66, 2.6], [0.52, 3.2], [0.44, 3.25]].map(([r, y]) => new THREE.Vector2(r, y));
@@ -389,7 +396,7 @@ function makeDrone({ env, legs = false, lod = 'high', color = 0x2b2d30 } = {}) {
     center: new THREE.Vector3(0, 0.6, -0.4),
   };
   root.userData.anchors = anchors;
-  root.userData.materials = [capMat, sideMat, nacMat];
+  root.userData.materials = [capMat, nacMat];
   return root;
 }
 
@@ -822,9 +829,10 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
 
   // flock (sync scene)
   const flockN = 38; const flock = [];
+  const flockMat = new THREE.MeshLambertMaterial({ color: 0xe6e8ea });
   { const rnd = mulberry(123);
     for (let i = 0; i < flockN; i++) {
-      const d = makeDrone({ lod: 'low', color: 0xe6e8ea }); d.scale.setScalar(0.8);
+      const d = makeDrone({ lod: 'low', material: flockMat }); d.scale.setScalar(0.8);
       const x = FLOCK.x + (rnd() - 0.5) * 700, z = FLOCK.z - 30 + (rnd() - 0.5) * 430;
       d.userData.base = new THREE.Vector3(x, 0, z); d.userData.ph = rnd() * 100; d.userData.sp = 0.5 + rnd() * 0.6;
       d.position.set(x, G(x, z) + 14, z); sceneB.add(d); flock.push(d);
