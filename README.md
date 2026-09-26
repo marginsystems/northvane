@@ -74,6 +74,8 @@ index.html            shell, preloads
 css/style.css         design tokens, type scale, layout, responsive rules
 js/content.js         every string on the page (rebrand here)
 js/main.js            loader, scroll stepping, scene reveals, pinned labels, menu, contact modal, audio
+js/story.js           story overlays and the lower-page sections, filled by mountStory and mountTail
+js/bridge.js          the one Lenis instance and the menu and modal flags
 js/world.js           terrain + map worlds, keyframes, wipe compositor, tail views
 js/vendor/            three.js r169, Lenis 1.1.20
 assets/terrain/       baked terrain (height.bin, albedo.jpg, light.jpg, meta.json)
