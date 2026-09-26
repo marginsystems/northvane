@@ -1,9 +1,10 @@
 import Lenis from './vendor/lenis.mjs';
 import { createWorld, STOPS } from './world.js';
-import { SCENES, MAP_TAGS, MENU } from './content.js';
+import { SCENES, MAP_TAGS } from './content.js';
 import { bridge } from './bridge.js';
 import { mountStory } from './story.js';
 import { mountTail } from './tail.jsx';
+import { mountMenu } from './menu.jsx';
 
 const $ = (s, r = document) => r.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -35,10 +36,7 @@ const {
   sceneEls, droneTags, swarmPath, calloutLines, dboxes, chipMain, svcTags, multiChips, sceneNav, navItems, navLabels,
 } = mountStory(document, { icons: ICON, onJump: (idx) => jumpToScene(idx) });
 const { globeLabels, views } = mountTail(document, { icons: ICON });
-
-$('#menu-links').innerHTML = MENU.links.map((l) => `<li><button data-go="${l.go}">${l.label}</button></li>`).join('');
-$('#menu-extras').innerHTML = MENU.extras.map((e) => `<button data-contact><b>${e.title} ${ICON.arrowUR}</b><span>${e.text}</span></button>`).join('');
-document.querySelectorAll('.menu-links button').forEach((b, i) => (b.style.transitionDelay = `${0.1 + i * 0.05}s`));
+mountMenu(document, { icons: ICON });
 
 /* ------------------------------------------------------------ scroll */
 let VH = innerHeight;
