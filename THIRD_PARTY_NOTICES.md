@@ -9,4 +9,14 @@ This repository bundles the following libraries unmodified in `js/vendor/`. Both
 
 Full license texts: https://github.com/mrdoob/three.js/blob/dev/LICENSE and https://github.com/darkroomengineering/lenis/blob/main/LICENSE
 
+The production bundle also includes these npm packages, all MIT licensed.
+
+| Package | Version | License |
+|---|---|---|
+| `react` | 19.3.0 | MIT |
+| `react-dom` | 19.3.0 | MIT |
+| `scheduler` | 0.28.0 | MIT |
+
+Full license text: https://github.com/facebook/react/blob/v19.3.0/LICENSE
+
 Fonts (bundled in `fonts/`, latin subset): Geist and Geist Mono by Vercel, SIL Open Font License 1.1. See `fonts/OFL.txt`.
