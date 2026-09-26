@@ -1343,6 +1343,8 @@ function makeViews(env) {
     scene.add(new THREE.HemisphereLight(0xb8c0cc, 0x0a0a0a, 0.7));
     const key = new THREE.DirectionalLight(0xffffff, 2.6); key.position.set(-4, 10, 8); scene.add(key);
     const rim = new THREE.DirectionalLight(0xa9c1ff, 1.6); rim.position.set(5, 3, -8); scene.add(rim);
+    // Same directional-light count as the close-up, so the aircraft programs are reused. Intensity 0 adds no light.
+    scene.add(new THREE.DirectionalLight(0x000000, 0));
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(7, 48), new THREE.MeshBasicMaterial({ map: glowTexture('rgba(0,0,0,.9)', 'rgba(0,0,0,0)'), transparent: true, depthWrite: false }));
     shadow.rotation.x = -Math.PI / 2; scene.add(shadow);
     const floorMat = gridMaterial(); floorMat.uniforms.uRad.value = 70;
