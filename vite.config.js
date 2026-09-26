@@ -68,7 +68,9 @@ function northvaneAssets() {
       });
     },
     closeBundle() {
-      cpSync(assetsRoot(), join(process.cwd(), 'dist', 'assets'), { recursive: true });
+      const dist = join(process.cwd(), 'dist');
+      cpSync(assetsRoot(), join(dist, 'assets'), { recursive: true });
+      cpSync(join(process.cwd(), 'workers', '_headers'), join(dist, '_headers'));
     },
   };
 }

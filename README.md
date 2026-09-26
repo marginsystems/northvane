@@ -21,6 +21,8 @@ npm run dev
 
 Then open http://localhost:5194. The page needs HTTP (not `file://`) because it loads ES modules and fetches the terrain data. `npm run build` writes a static `dist/` for hosting.
 
+`npm run deploy` builds that folder and publishes it with Wrangler. The Worker serves `dist/` only: missing paths 404, there is no single-page fallback, and the repo root is not an asset directory. Turn Rocket Loader off on the zone. `height.bin` is raw float data; `_headers` serves it as `application/octet-stream` and it is not worth compressing.
+
 Debug URL parameters:
 
 | Param | Effect |
@@ -70,6 +72,8 @@ At runtime the terrain is loaded at half scale and mirror-tiled 5×5, with low-r
 ```
 package.json          npm run dev / npm run build
 vite.config.js        dev server on port 5194, copies assets into dist
+wrangler.jsonc        Workers static assets from dist/ (not the repo, not SPA fallback)
+workers/_headers      content type for height.bin, copied into dist/
 index.html            shell, preloads
 css/style.css         design tokens, type scale, layout, responsive rules
 js/content.js         every string on the page (rebrand here)
