@@ -79,7 +79,8 @@ index.html            shell, preloads
 css/style.css         design tokens, type scale, layout, responsive rules
 js/content.js         every string on the page (rebrand here)
 js/main.js            loader, scroll stepping, scene reveals, pinned labels, menu, contact modal, audio
-js/story.js           story overlays and the lower-page sections, filled by mountStory and mountTail
+js/story.js           story overlays, filled by mountStory
+js/tail.jsx           lower page in React: cases, globe, autonomy, founders, footer
 js/bridge.js          the one Lenis instance and the menu and modal flags
 js/world.js           terrain + map worlds, keyframes, wipe compositor, tail views
 js/normals.js         heightfield to normal map, on a worker during boot
