@@ -1,5 +1,6 @@
 import { cpSync, createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, sep } from 'node:path';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 const MIME = {
@@ -77,6 +78,6 @@ function northvaneAssets() {
 
 export default defineConfig({
   server: { port: 5194, strictPort: true },
-  build: { outDir: 'dist', chunkSizeWarningLimit: 800 },
-  plugins: [stashStaticAssets(), northvaneAssets(), restoreStaticAssets()],
+  build: { outDir: 'dist', chunkSizeWarningLimit: 900 },
+  plugins: [react(), stashStaticAssets(), northvaneAssets(), restoreStaticAssets()],
 });

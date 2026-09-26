@@ -1,4 +1,4 @@
-import { SCENES, MULTI_TAGS, SERVICE_TAGS, DETECT_LABELS, USE_CASES, GLOBE_TEXT, GLOBE_EVENTS, AUTONOMY, FOUNDERS, FOOTER } from './content.js';
+import { SCENES, MULTI_TAGS, SERVICE_TAGS, DETECT_LABELS } from './content.js';
 
 function splitChars(html) {
   return html.split(/<br\s*\/?>/i).map((line) => line.split(' ').map((w) =>
@@ -9,24 +9,7 @@ function hudLine(item) {
   if (Array.isArray(item[0])) return item[0].map(([t, c]) => `<span class="${c ? 'c-' + c : ''}">${t}</span>`).join('');
   const [t, c] = item; return `<span class="${c ? 'c-' + c : ''}">${t}</span>`;
 }
-function logoSVG({ name, style }) {
-  const fonts = {
-    wide: `font-family:var(--sans);font-weight:600;letter-spacing:.32em;font-size:15px`,
-    round: `font-family:var(--sans);font-weight:500;letter-spacing:-.02em;font-size:30px`,
-    mono: `font-family:var(--mono);font-weight:500;letter-spacing:.24em;font-size:16px`,
-    serif: `font-family:Georgia,serif;font-style:italic;font-size:24px`,
-    mark: `font-family:var(--sans);font-weight:600;letter-spacing:.14em;font-size:15px`,
-    thin: `font-family:var(--sans);font-weight:400;letter-spacing:.4em;font-size:14px`,
-    bold: `font-family:var(--sans);font-weight:600;letter-spacing:-.05em;font-size:28px`,
-  };
-  const w = Math.max(120, name.length * (style === 'round' || style === 'bold' ? 16 : 14) + (style === 'wide' || style === 'thin' ? name.length * 5 : 0));
-  const mark = style === 'mark' ? `<path d="M4 26 L14 8 L24 26 Z" fill="none" stroke="currentColor" stroke-width="2"/>` : style === 'round' ? `<circle cx="12" cy="19" r="8" fill="none" stroke="currentColor" stroke-width="2.2"/>` : '';
-  const x = mark ? 34 : 0;
-  return `<svg viewBox="0 0 ${w + x} 38" aria-label="${name}"><g fill="currentColor">${mark}<text x="${x}" y="27" style="${fonts[style]}">${name}</text></g></svg>`;
-}
-
-// Call during boot, or later from a layout effect once the nodes exist.
-// Story overlays and tail sections stay imperative. Header and the scroll spacer stay in main.
+// Story overlays stay imperative. Header and the scroll spacer stay in main.
 export function mountStory(doc, { icons, onJump }) {
   const $ = (s, r = doc) => r.querySelector(s);
   const overlay = $('#overlay');
@@ -77,36 +60,6 @@ export function mountStory(doc, { icons, onJump }) {
   });
 
   return { sceneEls, droneTags, swarmPath, calloutLines, dboxes, chipMain, svcTags, multiChips, sceneNav, navItems, navLabels };
-}
-
-// Fills the sections under the WebGL story. Those nodes are direct children of #main;
-// a wrapper inside #main would sit under pointer-events: none and the page would not receive clicks.
-export function mountTail(doc, { icons }) {
-  const $ = (s, r = doc) => r.querySelector(s);
-  const casesRow = $('#cases-row');
-  const caseEls = USE_CASES.map((c, i) => {
-    const d = doc.createElement('div'); d.className = 'case' + (i === 0 ? ' is-active' : '');
-    d.innerHTML = `<img src="${c.img}" alt="" loading="lazy"><div class="case-copy"><h3>${c.title}</h3><p>${c.text}</p></div>`;
-    d.addEventListener('click', () => caseEls.forEach((e, k) => e.classList.toggle('is-active', k === i)));
-    casesRow.appendChild(d); return d;
-  });
-  $('#globe-text').textContent = GLOBE_TEXT;
-  const globeLabels = GLOBE_EVENTS.map((e) => { const d = doc.createElement('div'); d.className = 'glabel'; d.textContent = e.text; d.style.opacity = 0; $('#globe-labels').appendChild(d); return d; });
-  $('#auto-title').innerHTML = AUTONOMY.title;
-  $('#auto-body').textContent = AUTONOMY.body;
-  $('#auto-cta').innerHTML = `${AUTONOMY.cta}${icons.target}`;
-  $('#founders-text').textContent = FOUNDERS.text;
-  $('#logos').innerHTML = FOUNDERS.logos.map(logoSVG).join('');
-  $('#footer-cta').textContent = FOOTER.cta;
-  $('#footer-btn').innerHTML = `${FOOTER.button} ${icons.right}`;
-  $('#footer-copy').textContent = `${FOOTER.copy} ${new Date().getFullYear()}`;
-  $('#footer-links').innerHTML = FOOTER.links.map((l) => `<a href="#" data-contact-link>${l}</a>`).join('');
-  const views = [
-    { name: 'globe', el: $('#globe-view'), sec: $('#globe') },
-    { name: 'auto', el: $('#auto-view'), sec: $('#autonomy') },
-    { name: 'land', el: $('#land-view'), sec: $('#footer') },
-  ];
-  return { globeLabels, views, caseEls };
 }
 
 if (import.meta.hot) import.meta.hot.decline();

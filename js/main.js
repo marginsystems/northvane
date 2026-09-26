@@ -2,7 +2,8 @@ import Lenis from './vendor/lenis.mjs';
 import { createWorld, STOPS } from './world.js';
 import { SCENES, MAP_TAGS, MENU } from './content.js';
 import { bridge } from './bridge.js';
-import { mountStory, mountTail } from './story.js';
+import { mountStory } from './story.js';
+import { mountTail } from './tail.jsx';
 
 const $ = (s, r = document) => r.querySelector(s);
 const params = new URLSearchParams(location.search);
