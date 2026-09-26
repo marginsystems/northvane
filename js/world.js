@@ -660,7 +660,7 @@ function delaunayEdges(P) {
 }
 
 /* ----------------------------------------------------------------- world */
-export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 } = {}) {
+export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5, perf = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', alpha: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprMax));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -668,8 +668,17 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(0x000000, 1);
   const tick = () => new Promise((r) => setTimeout(r, 0));
+  const stages = [];
+  let stageAt = performance.now();
+  const stage = (name) => {
+    if (!perf) return;
+    const now = performance.now();
+    stages.push({ name, ms: Math.round(now - stageAt) });
+    stageAt = now;
+  };
 
   const env = makeEnv(renderer);
+  stage('env');
   onProgress(0.15); await tick();
 
   /* ---------- World A ---------- */
@@ -679,6 +688,7 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
   const terrain = await makeTerrain(renderer); sceneA.add(terrain.mesh);
   terrain.uniforms.uHot.value.set(HOT.x, H(HOT.x, HOT.z), HOT.z);
   sceneA.background = terrain.uniforms.uFogCol.value;
+  stage('terrain');
   onProgress(0.55); await tick();
   const hemiA = new THREE.HemisphereLight(0xcfd8e0, 0x2a2a20, 0.9); sceneA.add(hemiA);
   const sun = new THREE.DirectionalLight(0xfff2e0, 3.2); sun.position.copy(terrain.uniforms.uSunDir.value).multiplyScalar(100); sceneA.add(sun);
@@ -773,6 +783,7 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
   const ground = new THREE.Mesh(groundGeo, gridMat); sceneB.add(ground);
   sceneB.add(new THREE.HemisphereLight(0xffffff, 0x222222, 1.4));
   const dl = new THREE.DirectionalLight(0xffffff, 1.6); dl.position.set(-1, 2, 1); sceneB.add(dl);
+  stage('flight');
   onProgress(0.7); await tick();
 
   const regions = {
@@ -871,6 +882,7 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
   }));
   const compScene = new THREE.Scene(); compScene.add(comp);
   const compCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  stage('map');
 
   /* ---------- Tail views ---------- */
   let views = null;
@@ -1168,8 +1180,9 @@ export async function createWorld(canvas, { onProgress = () => {}, dprMax = 1.5 
     await Promise.all([compileA, compileB, compileC]);
   } catch (_) { /* older drivers: compile on first draw */ }
   renderer.setRenderTarget(null);
+  stage('compile');
   onProgress(1);
-  return { renderer, update, render, resize, state, project, bake, keysA, getViews, setPixelRatio };
+  return { renderer, update, render, resize, state, project, bake, keysA, getViews, setPixelRatio, perf: perf ? { stages, programs: () => renderer.info.programs.length } : null };
 }
 
 /* ------------------------------------------------------------ tail views */
